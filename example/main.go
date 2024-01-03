@@ -34,7 +34,7 @@ func main() {
 		ID: "awaited id",
 		ExecuteFunc: func() {
 			time.Sleep(100 * time.Millisecond)
-			fmt.Printf("executing: awaited goroutine")
+			fmt.Println("executing: awaited goroutine")
 		},
 		Finished: finished,
 	})
