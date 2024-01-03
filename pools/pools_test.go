@@ -1,6 +1,8 @@
 package pools_test
 
 import (
+	"fmt"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -10,7 +12,7 @@ import (
 )
 
 func Test_RoutinePools_Send_NotStarted_ReturnError(t *testing.T) {
-	routinePools := pools.New(1, 0, 0)
+	routinePools := pools.New(1, 1, 0, 0)
 
 	count := 0
 	err := routinePools.Send(pools.Routine{
@@ -27,7 +29,7 @@ func Test_RoutinePools_Send_NotStarted_ReturnError(t *testing.T) {
 }
 
 func Test_RoutinePools_Send_EmptyChannels_WillExecute(t *testing.T) {
-	routinePools := pools.New(1, 100*time.Second, 0)
+	routinePools := pools.New(1, 1, 100*time.Second, 0)
 	routinePools.Start()
 
 	count := 0
@@ -46,7 +48,7 @@ func Test_RoutinePools_Send_EmptyChannels_WillExecute(t *testing.T) {
 }
 
 func Test_RoutinePools_Send_FullChannel_ReturnError(t *testing.T) {
-	routinePools := pools.New(1, 0, 0)
+	routinePools := pools.New(1, 1, 0, 0)
 	routinePools.Start()
 
 	count := 0
@@ -79,13 +81,13 @@ func Test_RoutinePools_Send_FullChannel_ReturnError(t *testing.T) {
 		},
 	})
 
-	assert.Equal(t, pools.ErrPoolsUnavailable, err)
+	assert.Equal(t, pools.ErrFullQueue, err)
 
 	routinePools.Shutdown()
 }
 
 func Test_RoutinePools_Send_WithFinishFlag_WillExecute(t *testing.T) {
-	routinePools := pools.New(1, 100*time.Second, 0)
+	routinePools := pools.New(1, 1, 100*time.Second, 0)
 	routinePools.Start()
 
 	count := 0
@@ -105,4 +107,27 @@ func Test_RoutinePools_Send_WithFinishFlag_WillExecute(t *testing.T) {
 	assert.Equal(t, 1, count)
 
 	routinePools.Shutdown()
+}
+
+func Test_RoutinePools_Send_WithMultiplePools_WillExecute(t *testing.T) {
+	routinePools := pools.New(10, 100, 100*time.Second, 0)
+	routinePools.Start()
+
+	var count atomic.Int32
+	for i := 0; i < 100; i++ {
+		i := i
+		err := routinePools.Send(pools.Routine{
+			ID: fmt.Sprint(i),
+			ExecuteFunc: func() {
+				time.Sleep(1 * time.Second)
+				count.Add(1)
+			},
+		})
+
+		assert.Nil(t, err)
+	}
+
+	routinePools.Shutdown()
+
+	assert.Equal(t, int32(100), count.Load())
 }

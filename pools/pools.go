@@ -12,20 +12,23 @@ type Pools interface {
 	Send(Routine) error
 }
 
-func New(maxPoolSize int, shutdownPeriod time.Duration, cooldownPerExecutionPeriod time.Duration) Pools {
+func New(poolSize int, queueSize int, shutdownPeriod time.Duration, cooldownPerExecutionPeriod time.Duration) Pools {
 	return &pools{
-		maxPoolSize:                maxPoolSize,
+		poolSize:                   poolSize,
+		queueSize:                  queueSize,
 		shutdownPeriod:             shutdownPeriod,
 		cooldownPerExecutionPeriod: cooldownPerExecutionPeriod,
 	}
 }
 
 type pools struct {
-	maxPoolSize                int
-	shutdownPeriod             time.Duration
-	cooldownPerExecutionPeriod time.Duration
-	routines                   chan Routine
-	allExecutionFinished       chan bool
+	poolSize                    int
+	queueSize                   int
+	shutdownPeriod              time.Duration
+	cooldownPerExecutionPeriod  time.Duration
+	routines                    chan Routine
+	workerCompletedNotification chan bool
+	allWokerCompleted           chan bool
 }
 
 type Routine struct {
@@ -36,22 +39,28 @@ type Routine struct {
 
 var (
 	ErrWorkerNotStarted = errors.New("worker has not started yet")
-	ErrPoolsUnavailable = errors.New("routine pools are unavailable")
+	ErrFullQueue        = errors.New("routine queue is full")
 )
 
 func (r *pools) Start() {
 	fmt.Println("Starting goroutine pools")
 
-	r.routines = make(chan Routine, r.maxPoolSize)
-	r.allExecutionFinished = make(chan bool)
-	go r.worker()
+	r.routines = make(chan Routine, r.queueSize)
+	r.workerCompletedNotification = make(chan bool, r.poolSize)
+	r.allWokerCompleted = make(chan bool)
+
+	go r.checkCompletedWorker()
+
+	for i := 0; i < r.poolSize; i++ {
+		go r.worker()
+	}
 
 	fmt.Println("Goroutine pools started")
 }
 
 func (r *pools) worker() {
 	defer func() {
-		r.allExecutionFinished <- true
+		r.workerCompletedNotification <- true
 	}()
 
 	for routine := range r.routines {
@@ -64,6 +73,21 @@ func (r *pools) worker() {
 		}
 
 		fmt.Println("Goroutine execution finished: ", routine.ID)
+	}
+}
+
+func (r *pools) checkCompletedWorker() {
+	defer func() {
+		close(r.workerCompletedNotification)
+		r.allWokerCompleted <- true
+	}()
+
+	completedWorkerCount := 0
+	for range r.workerCompletedNotification {
+		completedWorkerCount += 1
+		if completedWorkerCount >= r.poolSize {
+			break
+		}
 	}
 }
 
@@ -91,7 +115,7 @@ func (r *pools) await() {
 
 	for time.Since(start) < r.shutdownPeriod {
 		select {
-		case <-r.allExecutionFinished:
+		case <-r.allWokerCompleted:
 			fmt.Println("all execution finished")
 			return
 		default:
@@ -110,7 +134,7 @@ func (r *pools) Send(routine Routine) error {
 	case r.routines <- routine:
 		fmt.Printf("goroutine queued: %s\n", routine.ID)
 	default:
-		return ErrPoolsUnavailable
+		return ErrFullQueue
 	}
 
 	return nil
