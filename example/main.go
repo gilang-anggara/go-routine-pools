@@ -18,12 +18,10 @@ func main() {
 	// fire and forget style
 	for i := 0; i < 10; i++ {
 		i := i
-
 		exec := func() {
 			time.Sleep(100 * time.Millisecond)
 			fmt.Printf("executing: %d\n", i)
 		}
-
 		routinePools.Send(pools.Routine{
 			ID:          fmt.Sprint(i),
 			ExecuteFunc: exec,
@@ -40,7 +38,6 @@ func main() {
 		},
 		Finished: finished,
 	})
-
 	<-finished
 
 	routinePools.Shutdown()
