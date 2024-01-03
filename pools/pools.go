@@ -91,6 +91,7 @@ func (r *pools) await() {
 			return
 		default:
 			fmt.Printf("%d goroutine remaining\n", len(r.routines))
+			time.Sleep(1 * time.Second)
 		}
 	}
 }
