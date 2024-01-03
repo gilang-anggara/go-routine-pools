@@ -25,6 +25,7 @@ type pools struct {
 	shutdownPeriod             time.Duration
 	cooldownPerExecutionPeriod time.Duration
 	routines                   chan Routine
+	allExecutionFinished       chan bool
 }
 
 type Routine struct {
@@ -41,12 +42,17 @@ func (r *pools) Start() {
 	fmt.Println("Starting goroutine pools")
 
 	r.routines = make(chan Routine, r.maxPoolSize)
+	r.allExecutionFinished = make(chan bool)
 	go r.worker()
 
 	fmt.Println("Goroutine pools started")
 }
 
 func (r *pools) worker() {
+	defer func() {
+		r.allExecutionFinished <- true
+	}()
+
 	for routine := range r.routines {
 		fmt.Println("Goroutine execution started: ", routine.ID)
 
@@ -66,34 +72,27 @@ func (r *pools) Shutdown() {
 	fmt.Println("Goroutine pools shut down")
 }
 
-func (r *pools) await() {
-	done := make(chan bool)
-
-	go func() {
-		start := time.Now()
-
-		isTimedOut := func() bool {
-			return time.Since(start) > r.shutdownPeriod
-		}
-
-		for len(r.routines) > 0 && !isTimedOut() {
-			fmt.Printf("%d goroutine remaining\n", len(r.routines))
-			time.Sleep(1 * time.Second)
-		}
-
-		done <- true
-	}()
-
-	<-done
-}
-
 func (r *pools) close() {
 	if r.routines == nil {
 		return
 	}
 
-	close(r.routines)
 	fmt.Printf("closing goroutine pools with %d remaining\n", len(r.routines))
+	close(r.routines)
+}
+
+func (r *pools) await() {
+	start := time.Now()
+
+	for time.Since(start) < r.shutdownPeriod {
+		select {
+		case <-r.allExecutionFinished:
+			fmt.Println("all execution finished")
+			return
+		default:
+			fmt.Printf("%d goroutine remaining\n", len(r.routines))
+		}
+	}
 }
 
 func (r *pools) Send(routine Routine) error {

@@ -8,7 +8,7 @@ import (
 )
 
 const maxPoolSize = 100
-const shutdownPeriod = 10 * time.Second
+const shutdownPeriod = 100 * time.Second
 const cooldownPerExecutionPeriod = 10 * time.Millisecond
 
 func main() {
@@ -20,7 +20,7 @@ func main() {
 
 		exec := func() {
 			time.Sleep(100 * time.Millisecond)
-			fmt.Println(i)
+			fmt.Printf("executing: %d\n", i)
 		}
 
 		routinePools.Send(pools.Routine{

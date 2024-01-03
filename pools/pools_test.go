@@ -27,7 +27,7 @@ func Test_RoutinePools_Send_NotStarted_ReturnError(t *testing.T) {
 }
 
 func Test_RoutinePools_Send_EmptyChannels_WillExecute(t *testing.T) {
-	routinePools := pools.New(1, 1*time.Second, 0)
+	routinePools := pools.New(1, 100*time.Second, 0)
 	routinePools.Start()
 
 	count := 0
