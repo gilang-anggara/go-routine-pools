@@ -13,7 +13,7 @@ func Test_RoutinePools_Send_NotStarted_ReturnError(t *testing.T) {
 	routinePools := pools.New(1, 0, 0)
 
 	count := 0
-	err := routinePools.Send(pools.Job{
+	err := routinePools.Send(pools.Routine{
 		ID: "1",
 		ExecuteFunc: func() {
 			time.Sleep(10 * time.Second)
@@ -31,7 +31,7 @@ func Test_RoutinePools_Send_EmptyChannels_WillExecute(t *testing.T) {
 	routinePools.Start()
 
 	count := 0
-	err := routinePools.Send(pools.Job{
+	err := routinePools.Send(pools.Routine{
 		ID: "2",
 		ExecuteFunc: func() {
 			time.Sleep(1 * time.Second)
@@ -50,7 +50,7 @@ func Test_RoutinePools_Send_FullChannel_ReturnError(t *testing.T) {
 	routinePools.Start()
 
 	count := 0
-	err := routinePools.Send(pools.Job{
+	err := routinePools.Send(pools.Routine{
 		ID: "3",
 		ExecuteFunc: func() {
 			time.Sleep(10 * time.Second)
@@ -60,7 +60,7 @@ func Test_RoutinePools_Send_FullChannel_ReturnError(t *testing.T) {
 
 	assert.Nil(t, err)
 
-	err = routinePools.Send(pools.Job{
+	err = routinePools.Send(pools.Routine{
 		ID: "4",
 		ExecuteFunc: func() {
 			count += 1

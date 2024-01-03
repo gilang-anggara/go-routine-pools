@@ -23,7 +23,7 @@ func main() {
 			fmt.Println(i)
 		}
 
-		routinePools.Send(pools.Job{
+		routinePools.Send(pools.Routine{
 			ID:          fmt.Sprint(i),
 			ExecuteFunc: exec,
 		})

@@ -9,25 +9,25 @@ import (
 type Pools interface {
 	Start()
 	Shutdown()
-	Send(j Job) error
+	Send(Routine) error
 }
 
 func New(maxPoolSize int, shutdownPeriod time.Duration, cooldownPerExecutionPeriod time.Duration) Pools {
-	return &routine{
+	return &pools{
 		maxPoolSize:                maxPoolSize,
 		shutdownPeriod:             shutdownPeriod,
 		cooldownPerExecutionPeriod: cooldownPerExecutionPeriod,
 	}
 }
 
-type routine struct {
+type pools struct {
 	maxPoolSize                int
 	shutdownPeriod             time.Duration
 	cooldownPerExecutionPeriod time.Duration
-	jobs                       chan Job
+	routines                   chan Routine
 }
 
-type Job struct {
+type Routine struct {
 	ID          string
 	ExecuteFunc func()
 }
@@ -37,26 +37,26 @@ var (
 	ErrPoolsUnavailable = errors.New("routine pools are unavailable")
 )
 
-func (r *routine) Start() {
+func (r *pools) Start() {
 	fmt.Println("Starting goroutine pools")
 
-	r.jobs = make(chan Job, r.maxPoolSize)
+	r.routines = make(chan Routine, r.maxPoolSize)
 	go r.worker()
 
 	fmt.Println("Goroutine pools started")
 }
 
-func (r *routine) worker() {
-	for job := range r.jobs {
-		fmt.Println("execution started: ", job.ID)
+func (r *pools) worker() {
+	for routine := range r.routines {
+		fmt.Println("execution started: ", routine.ID)
 
-		job.ExecuteFunc()
+		routine.ExecuteFunc()
 
-		fmt.Println("execution finished: ", job.ID)
+		fmt.Println("execution finished: ", routine.ID)
 	}
 }
 
-func (r *routine) Shutdown() {
+func (r *pools) Shutdown() {
 	r.close()
 
 	fmt.Println("Gracefully shutting down goroutine pools")
@@ -66,7 +66,7 @@ func (r *routine) Shutdown() {
 	fmt.Println("Goroutine pools shut down")
 }
 
-func (r *routine) await() {
+func (r *pools) await() {
 	done := make(chan bool)
 
 	go func() {
@@ -76,8 +76,8 @@ func (r *routine) await() {
 			return time.Since(start) > r.shutdownPeriod
 		}
 
-		for len(r.jobs) > 0 && !isTimedOut() {
-			fmt.Printf("%d goroutine remaining\n", len(r.jobs))
+		for len(r.routines) > 0 && !isTimedOut() {
+			fmt.Printf("%d goroutine remaining\n", len(r.routines))
 			time.Sleep(1 * time.Second)
 		}
 
@@ -87,23 +87,23 @@ func (r *routine) await() {
 	<-done
 }
 
-func (r *routine) close() {
-	if r.jobs == nil {
+func (r *pools) close() {
+	if r.routines == nil {
 		return
 	}
 
-	close(r.jobs)
-	fmt.Printf("closing goroutine pools with %d remaining\n", len(r.jobs))
+	close(r.routines)
+	fmt.Printf("closing goroutine pools with %d remaining\n", len(r.routines))
 }
 
-func (r *routine) Send(job Job) error {
-	if r.jobs == nil {
+func (r *pools) Send(routine Routine) error {
+	if r.routines == nil {
 		return ErrWorkerNotStarted
 	}
 
 	select {
-	case r.jobs <- job:
-		fmt.Printf("job queued: %s\n", job.ID)
+	case r.routines <- routine:
+		fmt.Printf("routine queued: %s\n", routine.ID)
 	default:
 		return ErrPoolsUnavailable
 	}
