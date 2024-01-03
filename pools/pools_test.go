@@ -60,8 +60,20 @@ func Test_RoutinePools_Send_FullChannel_ReturnError(t *testing.T) {
 
 	assert.Nil(t, err)
 
+	time.Sleep(1 * time.Second)
+
+	// this will stay in the buffer
 	err = routinePools.Send(pools.Routine{
 		ID: "4",
+		ExecuteFunc: func() {
+			count += 1
+		},
+	})
+
+	assert.Nil(t, err)
+
+	err = routinePools.Send(pools.Routine{
+		ID: "5",
 		ExecuteFunc: func() {
 			count += 1
 		},
