@@ -48,11 +48,11 @@ func (r *pools) Start() {
 
 func (r *pools) worker() {
 	for routine := range r.routines {
-		fmt.Println("execution started: ", routine.ID)
+		fmt.Println("Goroutine execution started: ", routine.ID)
 
 		routine.ExecuteFunc()
 
-		fmt.Println("execution finished: ", routine.ID)
+		fmt.Println("Goroutine execution finished: ", routine.ID)
 	}
 }
 
@@ -103,7 +103,7 @@ func (r *pools) Send(routine Routine) error {
 
 	select {
 	case r.routines <- routine:
-		fmt.Printf("routine queued: %s\n", routine.ID)
+		fmt.Printf("goroutine queued: %s\n", routine.ID)
 	default:
 		return ErrPoolsUnavailable
 	}
