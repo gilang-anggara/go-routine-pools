@@ -31,6 +31,7 @@ type pools struct {
 type Routine struct {
 	ID          string
 	ExecuteFunc func()
+	Finished    chan bool
 }
 
 var (
@@ -57,6 +58,10 @@ func (r *pools) worker() {
 		fmt.Println("Goroutine execution started: ", routine.ID)
 
 		routine.ExecuteFunc()
+
+		if routine.Finished != nil {
+			routine.Finished <- true
+		}
 
 		fmt.Println("Goroutine execution finished: ", routine.ID)
 	}

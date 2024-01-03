@@ -83,3 +83,26 @@ func Test_RoutinePools_Send_FullChannel_ReturnError(t *testing.T) {
 
 	routinePools.Shutdown()
 }
+
+func Test_RoutinePools_Send_WithFinishFlag_WillExecute(t *testing.T) {
+	routinePools := pools.New(1, 100*time.Second, 0)
+	routinePools.Start()
+
+	count := 0
+	finished := make(chan bool)
+	err := routinePools.Send(pools.Routine{
+		ID: "2",
+		ExecuteFunc: func() {
+			time.Sleep(1 * time.Second)
+			count += 1
+		},
+		Finished: finished,
+	})
+
+	<-finished
+
+	assert.Nil(t, err)
+	assert.Equal(t, 1, count)
+
+	routinePools.Shutdown()
+}

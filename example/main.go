@@ -15,7 +15,8 @@ func main() {
 	routinePools := pools.New(maxPoolSize, shutdownPeriod, cooldownPerExecutionPeriod)
 	routinePools.Start()
 
-	for i := 0; i < 100; i++ {
+	// fire and forget style
+	for i := 0; i < 10; i++ {
 		i := i
 
 		exec := func() {
@@ -28,6 +29,19 @@ func main() {
 			ExecuteFunc: exec,
 		})
 	}
+
+	// you can also optionally wait for specific goroutines to finish
+	finished := make(chan bool)
+	routinePools.Send(pools.Routine{
+		ID: "awaited id",
+		ExecuteFunc: func() {
+			time.Sleep(100 * time.Millisecond)
+			fmt.Printf("executing: awaited goroutine")
+		},
+		Finished: finished,
+	})
+
+	<-finished
 
 	routinePools.Shutdown()
 }
