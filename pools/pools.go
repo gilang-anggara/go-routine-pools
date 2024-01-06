@@ -28,7 +28,6 @@ type pools struct {
 	cooldownPerExecutionPeriod  time.Duration
 	routines                    chan Routine
 	workerCompletedNotification chan bool
-	allWokerCompleted           chan bool
 }
 
 type Routine struct {
@@ -47,9 +46,6 @@ func (r *pools) Start() {
 
 	r.routines = make(chan Routine, r.queueSize)
 	r.workerCompletedNotification = make(chan bool, r.poolSize)
-	r.allWokerCompleted = make(chan bool)
-
-	go r.checkCompletedWorker()
 
 	for i := 0; i < r.poolSize; i++ {
 		go r.worker()
@@ -76,21 +72,6 @@ func (r *pools) worker() {
 	}
 }
 
-func (r *pools) checkCompletedWorker() {
-	defer func() {
-		close(r.workerCompletedNotification)
-		r.allWokerCompleted <- true
-	}()
-
-	completedWorkerCount := 0
-	for range r.workerCompletedNotification {
-		completedWorkerCount += 1
-		if completedWorkerCount >= r.poolSize {
-			break
-		}
-	}
-}
-
 func (r *pools) Shutdown() {
 	r.close()
 
@@ -111,16 +92,14 @@ func (r *pools) close() {
 }
 
 func (r *pools) await() {
-	start := time.Now()
+	timeout := time.After(r.shutdownPeriod)
 
-	for time.Since(start) < r.shutdownPeriod {
+	for completed := 0; completed < r.poolSize; completed++ {
 		select {
-		case <-r.allWokerCompleted:
-			fmt.Println("all execution finished")
-			return
-		default:
-			fmt.Printf("%d goroutine remaining\n", len(r.routines))
-			time.Sleep(1 * time.Second)
+		case <-r.workerCompletedNotification:
+			fmt.Println("all goroutine execution finished")
+		case <-timeout:
+			fmt.Printf("timed out while waiting for goroutine executions to finish")
 		}
 	}
 }

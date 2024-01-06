@@ -18,14 +18,14 @@ func Test_RoutinePools_Send_NotStarted_ReturnError(t *testing.T) {
 	err := routinePools.Send(pools.Routine{
 		ID: "1",
 		ExecuteFunc: func() {
-			time.Sleep(10 * time.Second)
 			count += 1
 		},
 	})
 
-	assert.Equal(t, pools.ErrWorkerNotStarted, err)
-
 	routinePools.Shutdown()
+
+	assert.Equal(t, pools.ErrWorkerNotStarted, err)
+	assert.Equal(t, 0, count)
 }
 
 func Test_RoutinePools_Send_EmptyChannels_WillExecute(t *testing.T) {
@@ -36,7 +36,6 @@ func Test_RoutinePools_Send_EmptyChannels_WillExecute(t *testing.T) {
 	err := routinePools.Send(pools.Routine{
 		ID: "2",
 		ExecuteFunc: func() {
-			time.Sleep(1 * time.Second)
 			count += 1
 		},
 	})
@@ -51,12 +50,12 @@ func Test_RoutinePools_Send_FullChannel_ReturnError(t *testing.T) {
 	routinePools := pools.New(1, 1, 0, 0)
 	routinePools.Start()
 
-	count := 0
+	var count atomic.Int32
 	err := routinePools.Send(pools.Routine{
 		ID: "3",
 		ExecuteFunc: func() {
 			time.Sleep(10 * time.Second)
-			count += 1
+			count.Add(1)
 		},
 	})
 
@@ -68,7 +67,7 @@ func Test_RoutinePools_Send_FullChannel_ReturnError(t *testing.T) {
 	err = routinePools.Send(pools.Routine{
 		ID: "4",
 		ExecuteFunc: func() {
-			count += 1
+			count.Add(1)
 		},
 	})
 
@@ -77,13 +76,15 @@ func Test_RoutinePools_Send_FullChannel_ReturnError(t *testing.T) {
 	err = routinePools.Send(pools.Routine{
 		ID: "5",
 		ExecuteFunc: func() {
-			count += 1
+			count.Add(1)
 		},
 	})
 
 	assert.Equal(t, pools.ErrFullQueue, err)
 
 	routinePools.Shutdown()
+
+	assert.Equal(t, int32(0), count.Load())
 }
 
 func Test_RoutinePools_Send_WithFinishFlag_WillExecute(t *testing.T) {
@@ -95,7 +96,6 @@ func Test_RoutinePools_Send_WithFinishFlag_WillExecute(t *testing.T) {
 	err := routinePools.Send(pools.Routine{
 		ID: "2",
 		ExecuteFunc: func() {
-			time.Sleep(1 * time.Second)
 			count += 1
 		},
 		Finished: finished,
@@ -119,7 +119,6 @@ func Test_RoutinePools_Send_WithMultiplePools_WillExecute(t *testing.T) {
 		err := routinePools.Send(pools.Routine{
 			ID: fmt.Sprint(i),
 			ExecuteFunc: func() {
-				time.Sleep(1 * time.Second)
 				count.Add(1)
 			},
 		})
