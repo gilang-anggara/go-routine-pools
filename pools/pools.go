@@ -32,7 +32,7 @@ type pools struct {
 
 type Routine struct {
 	ExecuteFunc func()
-	Finished    chan bool
+	Finished    chan<- bool
 }
 
 var (
