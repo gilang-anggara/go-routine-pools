@@ -97,7 +97,7 @@ func (r *pools) await() {
 	for completed := 0; completed < r.poolSize; completed++ {
 		select {
 		case <-r.workerCompletedNotification:
-			fmt.Println("all goroutine execution finished")
+			fmt.Printf("goroutine worker finished, %d remaining\n", r.poolSize-completed-1)
 		case <-timeout:
 			fmt.Printf("timed out while waiting for goroutine executions to finish")
 		}
