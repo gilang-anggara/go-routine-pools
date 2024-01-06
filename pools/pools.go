@@ -31,7 +31,6 @@ type pools struct {
 }
 
 type Routine struct {
-	ID          string
 	ExecuteFunc func()
 	Finished    chan bool
 }
@@ -42,7 +41,7 @@ var (
 )
 
 func (r *pools) Start() {
-	fmt.Println("Starting goroutine pools")
+	fmt.Println("starting goroutine pools")
 
 	r.routines = make(chan Routine, r.queueSize)
 	r.workerCompletedNotification = make(chan bool, r.poolSize)
@@ -51,7 +50,7 @@ func (r *pools) Start() {
 		go r.worker()
 	}
 
-	fmt.Println("Goroutine pools started")
+	fmt.Println("goroutine pools started")
 }
 
 func (r *pools) worker() {
@@ -60,26 +59,22 @@ func (r *pools) worker() {
 	}()
 
 	for routine := range r.routines {
-		fmt.Println("Goroutine execution started: ", routine.ID)
-
 		routine.ExecuteFunc()
 
 		if routine.Finished != nil {
 			routine.Finished <- true
 		}
-
-		fmt.Println("Goroutine execution finished: ", routine.ID)
 	}
 }
 
 func (r *pools) Shutdown() {
 	r.close()
 
-	fmt.Println("Gracefully shutting down goroutine pools")
+	fmt.Println("gracefully shutting down goroutine pools")
 
 	r.await()
 
-	fmt.Println("Goroutine pools shut down")
+	fmt.Println("goroutine pools shut down")
 }
 
 func (r *pools) close() {
@@ -111,7 +106,6 @@ func (r *pools) Send(routine Routine) error {
 
 	select {
 	case r.routines <- routine:
-		fmt.Printf("goroutine queued: %s\n", routine.ID)
 	default:
 		return ErrFullQueue
 	}
