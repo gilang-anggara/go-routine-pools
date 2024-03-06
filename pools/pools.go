@@ -64,6 +64,8 @@ func (r *pools) worker() {
 		if routine.Finished != nil {
 			routine.Finished <- true
 		}
+
+		<-time.After(r.cooldownPerExecutionPeriod)
 	}
 }
 

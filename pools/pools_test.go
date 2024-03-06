@@ -121,3 +121,29 @@ func Test_RoutinePools_Send_WithMultiplePools_WillExecute(t *testing.T) {
 
 	assert.Equal(t, int32(100), count.Load())
 }
+
+func Test_RoutinePools_Send_WithDelayPerExecution_WillExecute(t *testing.T) {
+	routinePools := pools.New(1, 3, 100*time.Second, 200*time.Millisecond)
+	routinePools.Start()
+
+	start := time.Now()
+	var count atomic.Int32
+	routinePools.Send(pools.Routine{
+		ExecuteFunc: func() {
+			count.Add(1)
+		},
+	})
+	routinePools.Send(pools.Routine{
+		ExecuteFunc: func() {
+			count.Add(1)
+		},
+	})
+
+	routinePools.Shutdown()
+
+	duration := time.Since(start)
+
+	assert.Equal(t, int32(2), count.Load())
+	assert.True(t, duration > 400*time.Millisecond)
+	assert.True(t, duration < 500*time.Millisecond)
+}
