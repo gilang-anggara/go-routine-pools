@@ -128,12 +128,12 @@ func Test_RoutinePools_Send_WithDelayPerExecution_WillExecute(t *testing.T) {
 
 	start := time.Now()
 	var count atomic.Int32
-	routinePools.Send(pools.Routine{
+	_ = routinePools.Send(pools.Routine{
 		ExecuteFunc: func() {
 			count.Add(1)
 		},
 	})
-	routinePools.Send(pools.Routine{
+	_ = routinePools.Send(pools.Routine{
 		ExecuteFunc: func() {
 			count.Add(1)
 		},
